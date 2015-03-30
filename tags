@@ -1,0 +1,13 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+FTP_SERVER_H	ftp_server.h	2;"	d
+FTP_SERVER_LIB_H	ftp_server_lib.h	2;"	d
+HOST_LEN	ftp_server.h	13;"	d
+SERV_PORT	ftp_server.h	12;"	d
+get_server_socket_id	ftp_server_lib.cpp	/^int get_server_socket_id()$/;"	f	signature:()
+get_server_socket_id	ftp_server_lib.h	/^int get_server_socket_id();$/;"	p	signature:()
+main	ftp_server.cpp	/^int main()$/;"	f	signature:()
