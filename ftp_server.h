@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <iostream>
+#include <stdio.h>
 
 #define SERV_PORT 9989
 #define HOST_LEN 512
