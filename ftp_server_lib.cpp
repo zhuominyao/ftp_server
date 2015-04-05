@@ -24,6 +24,8 @@ int get_server_socket_id()
 	bzero((void*)&saddr,sizeof(saddr));
 
 	gethostname(hostname,HOST_LEN);
+	cout<<"the hostname is :"<<hostname<<endl;
+
 	hp = gethostbyname(hostname);
 
 	bcopy((void*)hp->h_addr,(void*)&saddr.sin_addr,hp->h_length);
@@ -38,7 +40,7 @@ int get_server_socket_id()
 
 	if(listen(server_socket_id,10) != 0)
 	{
-		cout<<"li<F3>sten error"<<endl;
+		cout<<"listen error"<<endl;
 		exit(-1);
 	}
 
@@ -56,14 +58,12 @@ void do_loop(int server_socket_id)
 	bool new_connect = false;
 	char cwd[FD_SETSIZE][100];
 
-
-
 	maxfd = server_socket_id;
 	maxi = -1;
 	for(i = 0;i < FD_SETSIZE;i++)
 	{
 		client[i] = -1;
-		strcpy(cwd[i],".");//将每一个fd的当前工作目录初始化为~
+		strcpy(cwd[i],"/");//将每一个fd的当前工作目录初始化为当前工作路径
 	}
 
 	FD_ZERO(&allset);
@@ -97,7 +97,7 @@ void do_loop(int server_socket_id)
 			}
 		}
 
-		if(i == FD_SETSIZE)//当连接数大于FD_SETSIZE时,程序退出
+		if(i == FD_SETSIZE)//当连接数大于FD_SETSIZE时,关闭客户端连接
 		{
 			cout<<"客户端连接太多,关闭新连接的客户";
 			close(client_socket_fd);
@@ -129,23 +129,63 @@ void do_loop(int server_socket_id)
 				continue;
 			if(FD_ISSET(socket_fd,&rset))
 			{
+				cout<<"in FD_ISSET"<<endl;
 				if((n = read(socket_fd,buffer,MAX_LEN)) == 0)//客户端发出FIN
 				{
 					getpeername(socket_fd,(struct sockaddr*)&addr,&len);
 					cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
 					cout<<"fd "<<socket_fd<<" release"<<endl;
+					strcpy(cwd[i],"/");
 					close(socket_fd);
 					FD_CLR(socket_fd,&allset);
 					client[i] = -1;
 				}
 				else
 				{
-					pthread_t tid;
-					struct thread_parameter parameter;
-					parameter.socket_fd = socket_fd;
-					strcpy(parameter.cwd,cwd[i]);
-					pthread_create(&tid,NULL,ftp_do_ls,&parameter);
+					buffer[n] = '\0';
 					cout<<buffer<<endl;
+					pthread_t tid;
+					if(strcmp(buffer,"ls") == 0)
+					{
+						struct ls_parameter ls_p;
+						ls_p.socket_fd = socket_fd;
+						strcpy(ls_p.cwd,cwd[i]);
+						pthread_create(&tid,NULL,ftp_do_ls,&ls_p);
+						cout<<buffer<<endl;
+					}
+					else if(strcmp(buffer,"cd") == 0)
+					{
+						char confirm[2] = "1";
+						write(socket_fd,confirm,strlen(confirm));
+						cout<<"enter cd"<<endl;
+						char path[MAX_LEN];
+						if((n = read(socket_fd,path,MAX_LEN)) == 0)
+						{
+							getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+							cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
+							cout<<"fd "<<socket_fd<<" release"<<endl;
+							strcpy(cwd[i],"/");
+							close(socket_fd);
+							FD_CLR(socket_fd,&allset);
+							client[i] = -1;
+						}
+						else
+						{
+							struct cd_parameter cd_p;
+							path[n] = '\0';
+							cout<<path<<endl;
+							if(strcmp(path,"/") == 0)//特殊情况：输入的路径是根目录
+								strcpy(cwd[i],path);
+							else
+							{
+								cd_p.socket_fd = socket_fd;
+								//strcpy(cd_p.cwd,cwd[i]);
+								cd_p.cwd = cwd[i];
+								strcpy(cd_p.request_path,path);
+								pthread_create(&tid,NULL,ftp_do_cd,&cd_p);
+							}
+						}
+					}
 				}
 				if(--n_ready <= 0)
 					break;
@@ -157,27 +197,187 @@ void do_loop(int server_socket_id)
 void * ftp_do_ls(void * p)
 {
 	pthread_detach(pthread_self());
-	struct thread_parameter * parameter = (struct thread_parameter *)p;
+	
+	struct ls_parameter* parameter = (struct ls_parameter*)p;
+	
 	cout<<"in thread"<<endl;
 	cout<<"socket_fd:"<<parameter->socket_fd<<endl;
 	cout<<"cwd:"<<parameter->cwd<<endl;
 	
 	DIR * dir;
 	struct dirent * direntp;
+	
 	if((dir = opendir(parameter->cwd)) != NULL)
 	{
+		FILE * fw = fdopen(parameter->socket_fd,"w");
 		while((direntp = readdir(dir)) != NULL)
 		{
+			if(strcmp(direntp->d_name,".") == 0 || strcmp(direntp->d_name,"..") == 0)
+				continue;
 			char absolute_path[100];
 			strcpy(absolute_path,parameter->cwd);
-			strcat(absolute_path,"/");
+			if(strcmp(absolute_path,"/") != 0)
+				strcat(absolute_path,"/");
 			strcat(absolute_path,direntp->d_name);
-			cout<<absolute_path<<endl;
-			write(parameter->socket_fd,absolute_path,strlen(absolute_path)+1);
+			fprintf(fw,"%-30s",absolute_path);
+			do_stat(fw,absolute_path,direntp->d_name);
+			fflush(fw);
 		}
+		fprintf(fw,"endoffile\n");
+		fflush(fw);
+		closedir(dir);
 	}
 	else
 		cout<<"can not open "<<parameter->cwd<<endl;
 }
 
+void * ftp_do_cd(void * p)
+{
+	pthread_detach(pthread_self());
 
+	struct cd_parameter * parameter= (struct cd_parameter *)p;
+
+	cout<<"in thread"<<endl;
+	cout<<"socket_fd:"<<parameter->socket_fd<<endl;
+	cout<<"cwd:"<<parameter->cwd<<endl;
+	cout<<"request path:"<<parameter->request_path<<endl;
+
+	int statue = -1;
+	char root[5] = "/";
+	if(parameter->request_path[0] == '/')
+		statue = is_path_exist(root,parameter->request_path+1);
+	else
+		statue = is_path_exist(parameter->cwd,parameter->request_path);
+
+	cout<<statue<<endl;
+	if(statue == 1)
+	{
+		if(parameter->request_path[0] == '/')//如果请求的是绝对路径
+		{
+			strcpy(parameter->cwd,parameter->request_path);
+			cout<<"new cwd:"<<parameter->cwd<<endl;
+		}
+		else//如果请求的是相对路径
+		{
+			if(parameter->cwd[strlen(parameter->cwd)-1] != '/')
+				strcat(parameter->cwd,"/");
+			strcat(parameter->cwd,parameter->request_path);
+			cout<<"new cwd:"<<parameter->cwd<<endl;
+		}
+	}
+}
+
+int is_path_exist(char * root,char * request_path)
+{
+	cout<<"root:"<<root<<endl;
+	cout<<"request_path:"<<request_path<<endl;
+	DIR * dir;
+	struct dirent * direntp;
+
+	if((dir = opendir(root)) != NULL)
+	{
+		while((direntp = readdir(dir)) != NULL)
+		{
+			if(strcmp(direntp->d_name,request_path) == 0)
+			{
+				struct stat s;
+				char absolute_path[MAX_LEN];
+
+				strcpy(absolute_path,root);
+				strcat(absolute_path,"/");
+				strcat(absolute_path,request_path);
+
+				lstat(absolute_path,&s);
+				if(S_ISDIR(s.st_mode))
+				{
+
+					return 1;//请求的路径存在且为文件夹
+				}
+				else
+					return 2;//请求的路径存在但不为文件夹
+			}
+		}
+		return 3;//请求的路径不存在
+	}
+}
+
+void do_stat(FILE * fw,char * absolute_path,char * filename)
+{
+	struct stat s;
+	if(lstat(absolute_path,&s) == -1)
+		cout<<"lstat error"<<endl;
+	else
+		show_file_info(fw,absolute_path,&s,filename);
+}
+
+void show_file_info(FILE * fw,char * absolute_filename,struct stat * info,char * filename)  
+{  
+	char mode[11];  
+	mode_to_letters(info->st_mode,mode);  
+	fprintf(fw,"%-10s ",mode);  
+	fprintf(fw,"%-10d ",info->st_nlink);  
+	fprintf(fw,"%-10s ",uid_to_name(info->st_uid));  
+	fprintf(fw,"%-10s ",gid_to_name(info->st_gid));  
+	fprintf(fw,"%-10d ",(int)info->st_size);  
+	fprintf(fw,"%.12s ",4+ctime(&info->st_mtime));  
+	fprintf(fw,"\n");
+}  
+  
+void mode_to_letters(int mode,char * c_mode)  
+{  
+	strcpy(c_mode,"----------");  
+		  
+	if(S_ISDIR(mode))  
+		c_mode[0] = 'd';  
+	if(S_ISCHR(mode))  
+		c_mode[0] = 'c';  
+	if(S_ISBLK(mode))  
+		c_mode[0] = 'b';  
+					      
+	if(mode & S_IRUSR)  
+		c_mode[1] = 'r';  
+	if(mode & S_IWUSR)  
+		c_mode[2] = 'w';  
+	if(mode & S_IXUSR)  
+		c_mode[3] = 'x';  
+								  
+	if(mode & S_IRGRP)  
+		c_mode[4] = 'r';  
+	if(mode & S_IWGRP)  
+		c_mode[5] = 'w';  
+	if(mode & S_IXGRP)  
+		c_mode[6] = 'x';  
+													  
+	if(mode & S_IROTH)  
+		c_mode[7] = 'r';  
+	if(mode & S_IWOTH)  
+		c_mode[8] = 'w';  
+	if(mode & S_IXOTH)  
+		c_mode[9] = 'x';  
+																		  
+	if(mode & S_ISUID)  
+		c_mode[3] = 's';  
+	if(mode & S_ISGID)  
+		c_mode[6] = 's';  
+	if(mode & S_ISVTX)  
+		c_mode[9] = 's';  
+}  
+  
+char * uid_to_name(uid_t uid)  
+{  
+	struct passwd * passwd_pointer;  
+	passwd_pointer = getpwuid(uid);  
+	return passwd_pointer->pw_name;  
+}  
+  
+char * gid_to_name(gid_t gid)  
+{        
+	struct group * group_pointer;  
+	static char numstr[10];  
+	if((group_pointer = getgrgid(gid)) == NULL)  
+	{  
+		sprintf(numstr,"%d",gid);  
+		return numstr;  
+	}  
+	return group_pointer->gr_name;  
+}

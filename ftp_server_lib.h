@@ -26,12 +26,28 @@
 #define MAX_LEN 512
 
 int get_server_socket_id();
-void * ftp_do_ls(void * );
+void * ftp_do_ls(void *);
+void do_stat(FILE *,char *,char *);
+void show_file_info(FILE *,char *,struct stat *,char *);
+void mode_to_letters(int,char *);
+char * uid_to_name(uid_t);
+char * gid_to_name(gid_t);
+void * ftp_do_cd(void *);
+int is_path_exist(char *,char *);
 
-struct thread_parameter
+
+struct ls_parameter
 {
 	int socket_fd;
 	char  cwd[100];
 };
+
+struct cd_parameter
+{
+	int socket_fd;
+	char * cwd;
+	char request_path[100];
+};
+
 
 #endif
