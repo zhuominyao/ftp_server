@@ -33,6 +33,7 @@ void mode_to_letters(int,char *);
 char * uid_to_name(uid_t);
 char * gid_to_name(gid_t);
 void * ftp_do_cd(void *);
+void * ftp_do_pwd(void *);
 int is_path_exist(char *,char *);
 
 
@@ -49,5 +50,10 @@ struct cd_parameter
 	char request_path[100];
 };
 
+struct pwd_parameter
+{
+	int socket_fd;
+	char * cwd;
+};
 
 #endif

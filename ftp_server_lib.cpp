@@ -129,7 +129,6 @@ void do_loop(int server_socket_id)
 				continue;
 			if(FD_ISSET(socket_fd,&rset))
 			{
-				cout<<"in FD_ISSET"<<endl;
 				if((n = read(socket_fd,buffer,MAX_LEN)) == 0)//客户端发出FIN
 				{
 					getpeername(socket_fd,(struct sockaddr*)&addr,&len);
@@ -175,16 +174,60 @@ void do_loop(int server_socket_id)
 							path[n] = '\0';
 							cout<<path<<endl;
 							if(strcmp(path,"/") == 0)//特殊情况：输入的路径是根目录
+							{
 								strcpy(cwd[i],path);
+								FILE * fw = fdopen(socket_fd,"w");
+								fprintf(fw,"%d\n",1);
+								fflush(fw);
+							}
+							else if(strcmp(path,".") == 0)//特殊情况：输入的路径是.
+							{
+								FILE * fw = fdopen(socket_fd,"w");
+								fprintf(fw,"%d\n",1);
+								fflush(fw);
+							}
+							else if(strcmp(path,"..") == 0)//特殊情况：输入的路径是..
+							{
+								if(strcmp(cwd[i],"/") == 0)//如果当前工作目录为根目录
+								{
+									FILE * fw = fdopen(socket_fd,"w");
+									fprintf(fw,"%d\n",1);
+									fflush(fw);
+								}
+								else//如果当前工作目录不为根目录
+								{
+									int j;
+									for(j = strlen(cwd[i]);j >= 0;j--)//找到第一个'/'的位置
+									{
+										if(cwd[i][j] == '/')
+											break;
+									}
+									if(j == 0)//如果当前目录的上一级目录是根目录
+										strcpy(cwd[i],"/");
+									else
+										cwd[i][j] = '\0';
+									cout<<cwd[i]<<endl;
+
+									FILE * fw = fdopen(socket_fd,"w");
+									fprintf(fw,"%d\n",1);
+									fflush(fw);
+								}
+							}
 							else
 							{
 								cd_p.socket_fd = socket_fd;
-								//strcpy(cd_p.cwd,cwd[i]);
 								cd_p.cwd = cwd[i];
 								strcpy(cd_p.request_path,path);
 								pthread_create(&tid,NULL,ftp_do_cd,&cd_p);
 							}
 						}
+					}
+					else if(strcmp(buffer,"pwd") == 0)
+					{
+						struct pwd_parameter pwd_p;
+						pwd_p.socket_fd = socket_fd;
+						pwd_p.cwd = cwd[i];
+						pthread_create(&tid,NULL,ftp_do_pwd,&pwd_p);
 					}
 				}
 				if(--n_ready <= 0)
@@ -192,6 +235,17 @@ void do_loop(int server_socket_id)
 			}
 		}
 	}
+}
+
+void * ftp_do_pwd(void * p)
+{
+	pthread_detach(pthread_self());
+
+	struct pwd_parameter * parameter = (struct pwd_parameter*)p;
+	FILE * fw = fdopen(parameter->socket_fd,"w");
+
+	fprintf(fw,"%s\n",parameter->cwd);
+	fflush(fw);
 }
 
 void * ftp_do_ls(void * p)
@@ -212,14 +266,14 @@ void * ftp_do_ls(void * p)
 		FILE * fw = fdopen(parameter->socket_fd,"w");
 		while((direntp = readdir(dir)) != NULL)
 		{
-			if(strcmp(direntp->d_name,".") == 0 || strcmp(direntp->d_name,"..") == 0)
-				continue;
+		//	if(strcmp(direntp->d_name,".") == 0 || strcmp(direntp->d_name,"..") == 0)
+		//		continue;
 			char absolute_path[100];
 			strcpy(absolute_path,parameter->cwd);
 			if(strcmp(absolute_path,"/") != 0)
 				strcat(absolute_path,"/");
 			strcat(absolute_path,direntp->d_name);
-			fprintf(fw,"%-30s",absolute_path);
+			fprintf(fw,"%-50s",absolute_path);
 			do_stat(fw,absolute_path,direntp->d_name);
 			fflush(fw);
 		}
@@ -244,6 +298,8 @@ void * ftp_do_cd(void * p)
 
 	int statue = -1;
 	char root[5] = "/";
+	FILE * fw = fdopen(parameter->socket_fd,"w");
+
 	if(parameter->request_path[0] == '/')
 		statue = is_path_exist(root,parameter->request_path+1);
 	else
@@ -264,6 +320,20 @@ void * ftp_do_cd(void * p)
 			strcat(parameter->cwd,parameter->request_path);
 			cout<<"new cwd:"<<parameter->cwd<<endl;
 		}
+		fprintf(fw,"%d\n",statue);
+		fflush(fw);
+	}
+	else if(statue == 2)
+	{
+		cout<<"the request path exist,but is not a directory"<<endl;
+		fprintf(fw,"%d\n",statue);
+		fflush(fw);
+	}
+	else if(statue == 3)
+	{
+		cout<<"the request path is not exist"<<endl;
+		fprintf(fw,"%d\n",statue);
+		fflush(fw);
 	}
 }
 
