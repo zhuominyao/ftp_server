@@ -142,7 +142,7 @@ void do_loop(int server_socket_id)
 				else
 				{
 					buffer[n] = '\0';
-					cout<<buffer<<endl;
+					cout<<"get command:"<<buffer<<endl;
 					pthread_t tid;
 					if(strcmp(buffer,"ls") == 0)
 					{
@@ -150,7 +150,6 @@ void do_loop(int server_socket_id)
 						ls_p.socket_fd = socket_fd;
 						strcpy(ls_p.cwd,cwd[i]);
 						pthread_create(&tid,NULL,ftp_do_ls,&ls_p);
-						cout<<buffer<<endl;
 					}
 					else if(strcmp(buffer,"cd") == 0)
 					{
@@ -229,12 +228,62 @@ void do_loop(int server_socket_id)
 						pwd_p.cwd = cwd[i];
 						pthread_create(&tid,NULL,ftp_do_pwd,&pwd_p);
 					}
+					else if(strcmp(buffer,"get") == 0)
+					{
+						char confirm[2] = "1";
+						write(socket_fd,confirm,strlen(confirm));
+						char filename[MAX_LEN];
+						int n;
+						if((n = read(socket_fd,filename,MAX_LEN)) == 0)
+						{
+							getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+							cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
+							cout<<"fd "<<socket_fd<<" release"<<endl;
+							strcpy(cwd[i],"/");
+							close(socket_fd);
+							FD_CLR(socket_fd,&allset);
+							client[i] = -1;
+						}
+						else
+						{
+							filename[n] = '\0';
+							cout<<filename<<endl;
+							struct get_parameter get_p;
+							get_p.socket_fd = socket_fd;
+							strcpy(get_p.filename,filename);
+							get_p.cwd = cwd[i];
+							pthread_create(&tid,NULL,ftp_do_get,&get_p);
+						}
+					}
 				}
 				if(--n_ready <= 0)
 					break;
 			}
 		}
 	}
+}
+
+void * ftp_do_get(void * p)
+{
+	pthread_detach(pthread_self());
+
+	struct get_parameter * parameter = (struct get_parameter*)p;
+	char root[3] = "/";
+	int statue = -1;
+	FILE * fw;
+	fw = fdopen(parameter->socket_fd,"w");
+
+	cout<<"filename:"<<parameter->filename<<endl;
+	cout<<"cwd:"<<parameter->cwd<<endl;
+
+	if(parameter->filename[0] == '/')
+		statue = is_path_exist(root,parameter->filename+1);
+	else
+		statue = is_path_exist(parameter->cwd,parameter->filename);
+
+	cout<<statue<<endl;
+	fprintf(fw,"%d\n",statue);
+	fflush(fw);
 }
 
 void * ftp_do_pwd(void * p)
@@ -288,7 +337,6 @@ void * ftp_do_ls(void * p)
 void * ftp_do_cd(void * p)
 {
 	pthread_detach(pthread_self());
-
 	struct cd_parameter * parameter= (struct cd_parameter *)p;
 
 	cout<<"in thread"<<endl;
@@ -341,6 +389,33 @@ int is_path_exist(char * root,char * request_path)
 {
 	cout<<"root:"<<root<<endl;
 	cout<<"request_path:"<<request_path<<endl;
+
+	char absolute_path[MAX_LEN];
+	struct stat s;
+	int stat_result;
+
+	strcpy(absolute_path,root);
+	strcat(absolute_path,"/");
+	strcat(absolute_path,request_path);
+	cout<<"absolute_path:"<<absolute_path<<endl;
+
+	stat_result = lstat(absolute_path,&s);
+	if(stat_result == 0)
+	{
+		if(S_ISDIR(s.st_mode))
+			return 1;//请求的路径存在且为文件夹
+		else
+			return 2;//请求的路径存在但不为文件夹
+	}
+	else
+		return 3;//请求的路径不存在
+
+}
+
+/*int is_path_exist(char * root,char * request_path)
+{
+	cout<<"root:"<<root<<endl;
+	cout<<"request_path:"<<request_path<<endl;
 	DIR * dir;
 	struct dirent * direntp;
 
@@ -369,7 +444,7 @@ int is_path_exist(char * root,char * request_path)
 		}
 		return 3;//请求的路径不存在
 	}
-}
+}*/
 
 void do_stat(FILE * fw,char * absolute_path,char * filename)
 {

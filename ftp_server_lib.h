@@ -34,6 +34,7 @@ char * uid_to_name(uid_t);
 char * gid_to_name(gid_t);
 void * ftp_do_cd(void *);
 void * ftp_do_pwd(void *);
+void * ftp_do_get(void *);
 int is_path_exist(char *,char *);
 
 
@@ -53,6 +54,13 @@ struct cd_parameter
 struct pwd_parameter
 {
 	int socket_fd;
+	char * cwd;
+};
+
+struct get_parameter
+{
+	int socket_fd;
+	char filename[50];
 	char * cwd;
 };
 
