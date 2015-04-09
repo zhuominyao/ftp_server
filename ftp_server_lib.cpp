@@ -49,14 +49,14 @@ int get_server_socket_id()
 
 void do_loop(int server_socket_id)
 {
-	fd_set rset,allset;
-	int maxfd,maxi,n_ready,i;
+	fd_set rset,allset;//allset记录监听的所有socket_fd,rset记录有输入的fd
+	int maxfd,maxi,n_ready,i;//maxfd记录当前监听的所有socket_fd的最大值,在select中要用到;maxi记录client数组当前使用到的下标;n_ready存储select函数的返回值,表示有多少个客户socket有输入
 	int client_socket_fd;
-	int client[FD_SETSIZE];
+	int client[FD_SETSIZE];//储存客户socket_fd的数组
 	struct sockaddr_in addr;
 	socklen_t len;
 	bool new_connect = false;
-	char cwd[FD_SETSIZE][100];
+	char cwd[FD_SETSIZE][100];//存储每一个客户连接当前的工作路径
 
 	maxfd = server_socket_id;
 	maxi = -1;
@@ -76,7 +76,7 @@ void do_loop(int server_socket_id)
 
 		if(FD_ISSET(server_socket_id,&rset))//测试server_socket有没有输入,即有没有新的客户连接到server
 		{
-			client_socket_fd = accept(server_socket_id,NULL,NULL);
+			client_socket_fd = accept(server_socket_id,NULL,NULL);//有新的连接
 			new_connect = true;
 		}
 		else
@@ -92,14 +92,16 @@ void do_loop(int server_socket_id)
 		{
 			if(client[i] < 0)
 			{
-				client[i] = client_socket_fd;
+				client[i] = client_socket_fd;//将新的客户连接的fd记录到client数组
 				break;
 			}
 		}
 
 		if(i == FD_SETSIZE)//当连接数大于FD_SETSIZE时,关闭客户端连接
 		{
+			cout<<endl;
 			cout<<"客户端连接太多,关闭新连接的客户";
+			cout<<endl;
 			close(client_socket_fd);
 		}
 		else
@@ -115,6 +117,7 @@ void do_loop(int server_socket_id)
 			if(new_connect)
 			{
 				getpeername(client_socket_fd,(struct sockaddr*)&addr,&len);
+				cout<<endl;
 				cout<<"accept a connection from "<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<endl;
 				cout<<"allocate "<<client_socket_fd<<" to it"<<endl;
 				write(client_socket_fd,"220",4);	
@@ -132,6 +135,7 @@ void do_loop(int server_socket_id)
 				if((n = read(socket_fd,buffer,MAX_LEN)) == 0)//客户端发出FIN
 				{
 					getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+					cout<<endl;
 					cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
 					cout<<"fd "<<socket_fd<<" release"<<endl;
 					strcpy(cwd[i],"/");
@@ -142,6 +146,7 @@ void do_loop(int server_socket_id)
 				else
 				{
 					buffer[n] = '\0';
+					cout<<endl;
 					cout<<"get command:"<<buffer<<endl;
 					pthread_t tid;
 					if(strcmp(buffer,"ls") == 0)
@@ -155,11 +160,12 @@ void do_loop(int server_socket_id)
 					{
 						char confirm[2] = "1";
 						write(socket_fd,confirm,strlen(confirm));
-						cout<<"enter cd"<<endl;
+						//cout<<"enter cd"<<endl;
 						char path[MAX_LEN];
 						if((n = read(socket_fd,path,MAX_LEN)) == 0)
 						{
 							getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+							cout<<endl;
 							cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
 							cout<<"fd "<<socket_fd<<" release"<<endl;
 							strcpy(cwd[i],"/");
@@ -171,7 +177,7 @@ void do_loop(int server_socket_id)
 						{
 							struct cd_parameter cd_p;
 							path[n] = '\0';
-							cout<<path<<endl;
+							//cout<<"the path the client request is "<<path<<endl;
 							if(strcmp(path,"/") == 0)//特殊情况：输入的路径是根目录
 							{
 								strcpy(cwd[i],path);
@@ -237,6 +243,7 @@ void do_loop(int server_socket_id)
 						if((n = read(socket_fd,filename,MAX_LEN)) == 0)
 						{
 							getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+							cout<<endl;
 							cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
 							cout<<"fd "<<socket_fd<<" release"<<endl;
 							strcpy(cwd[i],"/");
@@ -247,7 +254,7 @@ void do_loop(int server_socket_id)
 						else
 						{
 							filename[n] = '\0';
-							cout<<filename<<endl;
+							//cout<<"the file the client request is "<<filename<<endl;
 							struct get_parameter get_p;
 							get_p.socket_fd = socket_fd;
 							strcpy(get_p.filename,filename);
@@ -271,30 +278,57 @@ void * ftp_do_get(void * p)
 	char root[3] = "/";
 	int statue = -1;
 	FILE * fw;
+	char absolute_filename[MAX_LEN];
 	fw = fdopen(parameter->socket_fd,"w");
 
 	cout<<"filename:"<<parameter->filename<<endl;
 	cout<<"cwd:"<<parameter->cwd<<endl;
 
-	if(parameter->filename[0] == '/')
+	if(parameter->filename[0] == '/')//如果client请求的是一个绝对路径
+	{
+		strcpy(absolute_filename,parameter->filename);
 		statue = is_path_exist(root,parameter->filename+1);
-	else
+	}
+	else//如果client请求的是相对路径
+	{
+		strcpy(absolute_filename,parameter->cwd);
+		if(strcmp(parameter->cwd,"/") != 0)//如果client请求的是相对路径,且当且工作路径不是'/',则先在当前工作路径上加上'/'
+			strcat(absolute_filename,"/");
+		strcat(absolute_filename,parameter->filename);
 		statue = is_path_exist(parameter->cwd,parameter->filename);
-
-	cout<<statue<<endl;
-	fprintf(fw,"%d\n",statue);
+	}
+	fprintf(fw,"%d\n",statue);//返回文件是否存在,若存在,是文件夹还是文件
 	fflush(fw);
+
+	if(statue == 2)//如果请求的文件存在,且为文件
+	{
+		FILE * fr = fopen(absolute_filename,"rb");
+		if(fr == NULL)
+		{
+			cout<<"fail to open file"<<endl;
+			return NULL;
+		}
+		while(!feof(fr))
+		{
+			char temp[MAX_LEN];
+			int n = fread(temp,1,MAX_LEN,fr);
+			cout<<"n:"<<n<<endl;
+			write(parameter->socket_fd,temp,n);
+		}
+		cout<<"success to transport file"<<endl;
+	}
 }
 
 void * ftp_do_pwd(void * p)
 {
 	pthread_detach(pthread_self());
-
 	struct pwd_parameter * parameter = (struct pwd_parameter*)p;
+	cout<<"socket_fd:"<<parameter->socket_fd<<endl;
 	FILE * fw = fdopen(parameter->socket_fd,"w");
 
 	fprintf(fw,"%s\n",parameter->cwd);
 	fflush(fw);
+	cout<<"cwd:"<<parameter->cwd<<endl;
 }
 
 void * ftp_do_ls(void * p)
@@ -303,7 +337,6 @@ void * ftp_do_ls(void * p)
 	
 	struct ls_parameter* parameter = (struct ls_parameter*)p;
 	
-	cout<<"in thread"<<endl;
 	cout<<"socket_fd:"<<parameter->socket_fd<<endl;
 	cout<<"cwd:"<<parameter->cwd<<endl;
 	
@@ -339,7 +372,6 @@ void * ftp_do_cd(void * p)
 	pthread_detach(pthread_self());
 	struct cd_parameter * parameter= (struct cd_parameter *)p;
 
-	cout<<"in thread"<<endl;
 	cout<<"socket_fd:"<<parameter->socket_fd<<endl;
 	cout<<"cwd:"<<parameter->cwd<<endl;
 	cout<<"request path:"<<parameter->request_path<<endl;
@@ -353,7 +385,7 @@ void * ftp_do_cd(void * p)
 	else
 		statue = is_path_exist(parameter->cwd,parameter->request_path);
 
-	cout<<statue<<endl;
+//	cout<<statue<<endl;
 	if(statue == 1)
 	{
 		if(parameter->request_path[0] == '/')//如果请求的是绝对路径
@@ -379,7 +411,7 @@ void * ftp_do_cd(void * p)
 	}
 	else if(statue == 3)
 	{
-		cout<<"the request path is not exist"<<endl;
+		cout<<"the request path is not exist or you have no right to access it"<<endl;
 		fprintf(fw,"%d\n",statue);
 		fflush(fw);
 	}
@@ -387,15 +419,14 @@ void * ftp_do_cd(void * p)
 
 int is_path_exist(char * root,char * request_path)
 {
-	cout<<"root:"<<root<<endl;
-	cout<<"request_path:"<<request_path<<endl;
-
 	char absolute_path[MAX_LEN];
 	struct stat s;
 	int stat_result;
 
 	strcpy(absolute_path,root);
-	strcat(absolute_path,"/");
+	
+	if(strcmp(root,"/") != 0)//如果当前根目录不为/
+		strcat(absolute_path,"/");
 	strcat(absolute_path,request_path);
 	cout<<"absolute_path:"<<absolute_path<<endl;
 
@@ -408,8 +439,7 @@ int is_path_exist(char * root,char * request_path)
 			return 2;//请求的路径存在但不为文件夹
 	}
 	else
-		return 3;//请求的路径不存在
-
+		return 3;//请求的路径不存在或者没有权限访问
 }
 
 /*int is_path_exist(char * root,char * request_path)
