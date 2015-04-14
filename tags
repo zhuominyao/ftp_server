@@ -6,8 +6,67 @@
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
 FTP_SERVER_H	ftp_server.h	2;"	d
 FTP_SERVER_LIB_H	ftp_server_lib.h	2;"	d
-HOST_LEN	ftp_server.h	13;"	d
-SERV_PORT	ftp_server.h	12;"	d
+HOST_LEN	ftp_server.h	14;"	d
+HOST_LEN	ftp_server_lib.h	25;"	d
+MAX_LEN	ftp_server_lib.h	26;"	d
+SERV_PORT	ftp_server.h	13;"	d
+SERV_PORT	ftp_server_lib.h	24;"	d
+cd_parameter	ftp_server_lib.h	/^struct cd_parameter$/;"	s
+cd_parameter::cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:cd_parameter	access:public
+cd_parameter::request_path	ftp_server_lib.h	/^	char request_path[100];$/;"	m	struct:cd_parameter	access:public
+cd_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:cd_parameter	access:public
+cwd	ftp_server_lib.h	/^	char  cwd[100];$/;"	m	struct:ls_parameter	access:public
+cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:cd_parameter	access:public
+cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:get_parameter	access:public
+cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:put_parameter	access:public
+cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:pwd_parameter	access:public
+do_loop	ftp_server.h	/^int do_loop(int);$/;"	p	signature:(int)
+do_loop	ftp_server_lib.cpp	/^void do_loop(int server_socket_id)$/;"	f	signature:(int server_socket_id)
+do_stat	ftp_server_lib.cpp	/^void do_stat(FILE * fw,char * absolute_path,char * filename)$/;"	f	signature:(FILE * fw,char * absolute_path,char * filename)
+do_stat	ftp_server_lib.h	/^void do_stat(FILE *,char *,char *);$/;"	p	signature:(FILE *,char *,char *)
+filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:get_parameter	access:public
+filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:put_parameter	access:public
+ftp_do_cd	ftp_server_lib.cpp	/^void * ftp_do_cd(void * p)$/;"	f	signature:(void * p)
+ftp_do_cd	ftp_server_lib.h	/^void * ftp_do_cd(void *);$/;"	p	signature:(void *)
+ftp_do_get	ftp_server_lib.cpp	/^void * ftp_do_get(void * p)$/;"	f	signature:(void * p)
+ftp_do_get	ftp_server_lib.h	/^void * ftp_do_get(void *);$/;"	p	signature:(void *)
+ftp_do_ls	ftp_server_lib.cpp	/^void * ftp_do_ls(void * p)$/;"	f	signature:(void * p)
+ftp_do_ls	ftp_server_lib.h	/^void * ftp_do_ls(void *);$/;"	p	signature:(void *)
+ftp_do_pwd	ftp_server_lib.cpp	/^void * ftp_do_pwd(void * p)$/;"	f	signature:(void * p)
+ftp_do_pwd	ftp_server_lib.h	/^void * ftp_do_pwd(void *);$/;"	p	signature:(void *)
+ftp_init	ftp_server.h	/^int ftp_init();$/;"	p	signature:()
+ftp_init	ftp_server_lib.cpp	/^int ftp_init()$/;"	f	signature:()
+get_parameter	ftp_server_lib.h	/^struct get_parameter$/;"	s
+get_parameter::cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:get_parameter	access:public
+get_parameter::filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:get_parameter	access:public
+get_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:get_parameter	access:public
+get_server_socket_id	ftp_server.h	/^int get_server_socket_id();$/;"	p	signature:()
 get_server_socket_id	ftp_server_lib.cpp	/^int get_server_socket_id()$/;"	f	signature:()
 get_server_socket_id	ftp_server_lib.h	/^int get_server_socket_id();$/;"	p	signature:()
+gid_to_name	ftp_server_lib.cpp	/^char * gid_to_name(gid_t gid)  $/;"	f	signature:(gid_t gid)
+gid_to_name	ftp_server_lib.h	/^char * gid_to_name(gid_t);$/;"	p	signature:(gid_t)
+is_path_exist	ftp_server_lib.cpp	/^int is_path_exist(char * root,char * request_path)$/;"	f	signature:(char * root,char * request_path)
+is_path_exist	ftp_server_lib.h	/^int is_path_exist(char *,char *);$/;"	p	signature:(char *,char *)
+ls_parameter	ftp_server_lib.h	/^struct ls_parameter$/;"	s
+ls_parameter::cwd	ftp_server_lib.h	/^	char  cwd[100];$/;"	m	struct:ls_parameter	access:public
+ls_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:ls_parameter	access:public
 main	ftp_server.cpp	/^int main()$/;"	f	signature:()
+mode_to_letters	ftp_server_lib.cpp	/^void mode_to_letters(int mode,char * c_mode)  $/;"	f	signature:(int mode,char * c_mode)
+mode_to_letters	ftp_server_lib.h	/^void mode_to_letters(int,char *);$/;"	p	signature:(int,char *)
+put_parameter	ftp_server_lib.h	/^struct put_parameter$/;"	s
+put_parameter::cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:put_parameter	access:public
+put_parameter::filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:put_parameter	access:public
+put_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:put_parameter	access:public
+pwd_parameter	ftp_server_lib.h	/^struct pwd_parameter$/;"	s
+pwd_parameter::cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:pwd_parameter	access:public
+pwd_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:pwd_parameter	access:public
+request_path	ftp_server_lib.h	/^	char request_path[100];$/;"	m	struct:cd_parameter	access:public
+show_file_info	ftp_server_lib.cpp	/^void show_file_info(FILE * fw,char * absolute_filename,struct stat * info,char * filename)  $/;"	f	signature:(FILE * fw,char * absolute_filename,struct stat * info,char * filename)
+show_file_info	ftp_server_lib.h	/^void show_file_info(FILE *,char *,struct stat *,char *);$/;"	p	signature:(FILE *,char *,struct stat *,char *)
+socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:cd_parameter	access:public
+socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:get_parameter	access:public
+socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:ls_parameter	access:public
+socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:put_parameter	access:public
+socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:pwd_parameter	access:public
+uid_to_name	ftp_server_lib.cpp	/^char * uid_to_name(uid_t uid)  $/;"	f	signature:(uid_t uid)
+uid_to_name	ftp_server_lib.h	/^char * uid_to_name(uid_t);$/;"	p	signature:(uid_t)

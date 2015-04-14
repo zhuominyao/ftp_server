@@ -262,12 +262,84 @@ void do_loop(int server_socket_id)
 							pthread_create(&tid,NULL,ftp_do_get,&get_p);
 						}
 					}
+					else if(strcmp(buffer,"put") == 0)
+					{
+						char confirm[2] = "1";
+						write(socket_fd,confirm,strlen(confirm));
+						char filename[MAX_LEN];
+						int n;
+						if((n = read(socket_fd,filename,MAX_LEN)) == 0)
+						{
+							getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+							cout<<endl;
+							cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
+							cout<<"fd "<<socket_fd<<" release"<<endl;
+							strcpy(cwd[i],"/");
+							close(socket_fd);
+							FD_CLR(socket_fd,&allset);
+							client[i] = -1;
+						}
+						else
+						{
+							filename[n] = '\0';
+							struct put_parameter put_p;
+							put_p.socket_fd = socket_fd;
+							strcpy(put_p.filename,filename);
+							put_p.cwd = cwd[i];
+							pthread_create(&tid,NULL,ftp_do_put,&put_p);
+						}
+					}
 				}
 				if(--n_ready <= 0)
 					break;
 			}
 		}
 	}
+}
+
+void * ftp_do_put(void * p)
+{
+	pthread_detach(pthread_self());
+
+	struct get_parameter * parameter = (struct get_parameter*)p;
+	cout<<"the current work directory is:"<<parameter->cwd<<endl;
+	cout<<"the filename is:"<<parameter->filename<<endl;
+
+	char absolute_filename[MAX_LEN];
+	strcpy(absolute_filename,parameter->cwd);	
+	if(strcmp(parameter->cwd,"/") != 0)
+		strcat(absolute_filename,"/");
+	
+	strcat(absolute_filename,parameter->filename);
+	cout<<"the absolute_filename is:"<<absolute_filename<<endl;
+
+	FILE * fw = fopen(absolute_filename,"wb+");
+	if(fw == NULL)
+	{
+		cout<<"fail to get file"<<endl;
+		return NULL;
+	}
+	int flags = fcntl(parameter->socket_fd,F_GETFL,0);
+	bool start = false;
+	fcntl(parameter->socket_fd,F_SETFL,flags | O_NONBLOCK);//将socket变成非阻塞式的
+	while(true)
+	{
+		char buffer[MAX_LEN];
+		cout<<"in while"<<endl;
+		int n = read(parameter->socket_fd,buffer,MAX_LEN);
+		cout<<"n:"<<n<<endl;
+		if((n == 0 || n == -1) && start)
+			break;
+		if(n != 0 && n != -1)
+		{
+			start = true;
+			fwrite(buffer,1,n,fw);
+			fflush(fw);
+		}
+	}
+	fcntl(parameter->socket_fd,F_SETFL,flags);
+	cout<<"get file successfully"<<endl;
+	fclose(fw);
 }
 
 void * ftp_do_get(void * p)

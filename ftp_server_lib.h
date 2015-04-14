@@ -19,7 +19,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <grp.h>
-
+#include <sys/fcntl.h>
 
 #define SERV_PORT 9989
 #define HOST_LEN 512
@@ -35,6 +35,7 @@ char * gid_to_name(gid_t);
 void * ftp_do_cd(void *);
 void * ftp_do_pwd(void *);
 void * ftp_do_get(void *);
+void * ftp_do_put(void *);
 int is_path_exist(char *,char *);
 
 
@@ -58,6 +59,13 @@ struct pwd_parameter
 };
 
 struct get_parameter
+{
+	int socket_fd;
+	char filename[50];
+	char * cwd;
+};
+
+struct put_parameter
 {
 	int socket_fd;
 	char filename[50];
