@@ -36,6 +36,7 @@ void * ftp_do_cd(void *);
 void * ftp_do_pwd(void *);
 void * ftp_do_get(void *);
 void * ftp_do_put(void *);
+void * ftp_do_delete(void *);
 int is_path_exist(char *,char *);
 
 
@@ -72,4 +73,10 @@ struct put_parameter
 	char * cwd;
 };
 
+struct delete_parameter
+{
+	int socket_fd;
+	char filename[50];
+	char * cwd;
+};
 #endif

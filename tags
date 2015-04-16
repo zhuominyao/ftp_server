@@ -17,13 +17,19 @@ cd_parameter::request_path	ftp_server_lib.h	/^	char request_path[100];$/;"	m	str
 cd_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:cd_parameter	access:public
 cwd	ftp_server_lib.h	/^	char  cwd[100];$/;"	m	struct:ls_parameter	access:public
 cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:cd_parameter	access:public
+cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:delete_parameter	access:public
 cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:get_parameter	access:public
 cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:put_parameter	access:public
 cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:pwd_parameter	access:public
+delete_parameter	ftp_server_lib.h	/^struct delete_parameter$/;"	s
+delete_parameter::cwd	ftp_server_lib.h	/^	char * cwd;$/;"	m	struct:delete_parameter	access:public
+delete_parameter::filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:delete_parameter	access:public
+delete_parameter::socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:delete_parameter	access:public
 do_loop	ftp_server.h	/^int do_loop(int);$/;"	p	signature:(int)
 do_loop	ftp_server_lib.cpp	/^void do_loop(int server_socket_id)$/;"	f	signature:(int server_socket_id)
 do_stat	ftp_server_lib.cpp	/^void do_stat(FILE * fw,char * absolute_path,char * filename)$/;"	f	signature:(FILE * fw,char * absolute_path,char * filename)
 do_stat	ftp_server_lib.h	/^void do_stat(FILE *,char *,char *);$/;"	p	signature:(FILE *,char *,char *)
+filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:delete_parameter	access:public
 filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:get_parameter	access:public
 filename	ftp_server_lib.h	/^	char filename[50];$/;"	m	struct:put_parameter	access:public
 ftp_do_cd	ftp_server_lib.cpp	/^void * ftp_do_cd(void * p)$/;"	f	signature:(void * p)
@@ -32,6 +38,8 @@ ftp_do_get	ftp_server_lib.cpp	/^void * ftp_do_get(void * p)$/;"	f	signature:(voi
 ftp_do_get	ftp_server_lib.h	/^void * ftp_do_get(void *);$/;"	p	signature:(void *)
 ftp_do_ls	ftp_server_lib.cpp	/^void * ftp_do_ls(void * p)$/;"	f	signature:(void * p)
 ftp_do_ls	ftp_server_lib.h	/^void * ftp_do_ls(void *);$/;"	p	signature:(void *)
+ftp_do_put	ftp_server_lib.cpp	/^void * ftp_do_put(void * p)$/;"	f	signature:(void * p)
+ftp_do_put	ftp_server_lib.h	/^void * ftp_do_put(void *);$/;"	p	signature:(void *)
 ftp_do_pwd	ftp_server_lib.cpp	/^void * ftp_do_pwd(void * p)$/;"	f	signature:(void * p)
 ftp_do_pwd	ftp_server_lib.h	/^void * ftp_do_pwd(void *);$/;"	p	signature:(void *)
 ftp_init	ftp_server.h	/^int ftp_init();$/;"	p	signature:()
@@ -64,6 +72,7 @@ request_path	ftp_server_lib.h	/^	char request_path[100];$/;"	m	struct:cd_paramet
 show_file_info	ftp_server_lib.cpp	/^void show_file_info(FILE * fw,char * absolute_filename,struct stat * info,char * filename)  $/;"	f	signature:(FILE * fw,char * absolute_filename,struct stat * info,char * filename)
 show_file_info	ftp_server_lib.h	/^void show_file_info(FILE *,char *,struct stat *,char *);$/;"	p	signature:(FILE *,char *,struct stat *,char *)
 socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:cd_parameter	access:public
+socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:delete_parameter	access:public
 socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:get_parameter	access:public
 socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:ls_parameter	access:public
 socket_fd	ftp_server_lib.h	/^	int socket_fd;$/;"	m	struct:put_parameter	access:public

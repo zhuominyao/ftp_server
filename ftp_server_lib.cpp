@@ -289,6 +289,33 @@ void do_loop(int server_socket_id)
 							pthread_create(&tid,NULL,ftp_do_put,&put_p);
 						}
 					}
+					else if(strcmp(buffer,"delete") == 0)
+					{
+						char confirm[2] = "1";
+						write(socket_fd,confirm,strlen(confirm));
+						char filename[MAX_LEN];
+						int n;
+						if((n = read(socket_fd,filename,MAX_LEN)) == 0)
+						{
+							getpeername(socket_fd,(struct sockaddr*)&addr,&len);
+							cout<<endl;
+							cout<<inet_ntoa(addr.sin_addr)<<" "<<ntohs(addr.sin_port)<<" disconnect"<<endl;
+							cout<<"fd "<<socket_fd<<" release"<<endl;
+							strcpy(cwd[i],"/");
+							close(socket_fd);
+							FD_CLR(socket_fd,&allset);
+							client[i] = -1;
+						}
+						else
+						{
+							filename[n] = '\0';
+							struct delete_parameter delete_p;
+							delete_p.socket_fd = socket_fd;
+							strcpy(delete_p.filename,filename);
+							delete_p.cwd = cwd[i];
+							pthread_create(&tid,NULL,ftp_do_delete,&delete_p);
+						}
+					}
 				}
 				if(--n_ready <= 0)
 					break;
@@ -297,11 +324,46 @@ void do_loop(int server_socket_id)
 	}
 }
 
+void * ftp_do_delete(void * p)
+{
+	pthread_detach(pthread_self());
+
+	struct delete_parameter * parameter = (struct delete_parameter *)p;
+
+	char root[3] = "/";
+	int statue = -1;
+	FILE * fw;
+	char absolute_filename[MAX_LEN];
+	fw = fdopen(parameter->socket_fd,"w");
+
+	cout<<"filename:"<<parameter->filename<<endl;
+	cout<<"cwd:"<<parameter->cwd<<endl;
+
+	if(parameter->filename[0] == '/')//如果client请求的是一个绝对路径
+	{
+		strcpy(absolute_filename,parameter->filename);
+		statue = is_path_exist(root,parameter->filename+1);
+	}
+	else//如果client请求的是相对路径
+	{
+		strcpy(absolute_filename,parameter->cwd);
+		if(strcmp(parameter->cwd,"/") != 0)//如果client请求的是相对路径,且当且工作路径不是'/',则先在当前工作路径上加上'/'
+			strcat(absolute_filename,"/");
+		strcat(absolute_filename,parameter->filename);
+		statue = is_path_exist(parameter->cwd,parameter->filename);
+	}
+	int result;
+	if(statue != 3)
+		result = remove(absolute_filename);
+	fprintf(fw,"%d\n",result);//返回删除的结果
+	fflush(fw);
+}
+
 void * ftp_do_put(void * p)
 {
 	pthread_detach(pthread_self());
 
-	struct get_parameter * parameter = (struct get_parameter*)p;
+	struct put_parameter * parameter = (struct put_parameter*)p;
 	cout<<"the current work directory is:"<<parameter->cwd<<endl;
 	cout<<"the filename is:"<<parameter->filename<<endl;
 
